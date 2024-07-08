@@ -40,6 +40,13 @@ namespace NES_Emulator {
     return address >> 8;
   }
 
+  nes_addr_mode NES_CPU::get_address_mode(opcode_t op) {
+    if (!OPERATION_ADDRESS_MODES.count(op))
+      return nes_addr_mode::nes_addr_mode_imp;
+    
+    return OPERATION_ADDRESS_MODES.at(op);
+  }
+
   // Instructions
   cycle_t NES_CPU::ADC(opcode_t op) {
     /**
@@ -276,6 +283,130 @@ namespace NES_Emulator {
      */
     BYTE val = 0;
 
+
+  }
+
+  cycle_t NES_CPU::DEC(opcode_t op) {
+    /**
+     * Decrement Memory by one.
+     */
+
+  }
+
+  cycle_t NES_CPU::DEX(opcode_t op) {
+    /**
+     * Decrement X by one.
+     */
+    // Cycle count
+    cycle_t cycles = get_cpu_cycles(op);
+    X() -= 1;
+
+    calc_alu_flags(X());
+
+    return cycles;
+  }
+
+  cycle_t NES_CPU::DEY(opcode_t op) {
+    /**
+     * Decrement Y by one.
+     */
+    // Cycle count
+    cycle_t cycles = get_cpu_cycles(op);
+    Y() -= 1;
+    
+    calc_alu_flags(Y());
+
+    return cycles;
+  }
+
+  cycle_t NES_CPU::EOR(opcode_t op) {
+    /**
+     * Exclusive-OR with memory and accumulator.
+     */
+    cycle_t cycles = get_cpu_cycles(op);
+    BYTE value = 0;
+
+    A() ^= value;
+
+    calc_alu_flags(A());
+    
+    return cycles;
+  }
+
+  cycle_t NES_CPU::INC(opcode_t op) {
+
+  }
+
+  cycle_t NES_CPU::INX(opcode_t op) {
+    /**
+     * Increment X by one.
+     */
+    cycle_t cycles = get_cpu_cycles(op);
+    X() += 1;
+
+    calc_alu_flags(X());
+
+    return cycles;
+  }
+
+  cycle_t NES_CPU::INY(opcode_t op) {
+    /**
+     * Increment Y by one.
+     */
+    cycle_t cycles = get_cpu_cycles(op);
+    Y() += 1;
+
+    calc_alu_flags(Y());
+
+    return cycles;
+  }
+
+  cycle_t NES_CPU::JMP(opcode_t op) {
+    /**
+     * Jump to new location.
+     */
+    cycle_t cycles = get_cpu_cycles(op);
+  }
+
+  cycle_t NES_CPU::JSR(opcode_t op) {
+    cycle_t cycles = get_cpu_cycles(op);
+
+  }
+
+  cycle_t NES_CPU::LDA(opcode_t op) {
+    cycle_t cycles = get_cpu_cycles(op);
+    BYTE value = 0;
+
+    A() = value;
+
+    calc_alu_flags(A());
+
+    return cycles;
+  }
+
+  cycle_t NES_CPU::LDX(opcode_t op) {
+    cycle_t cycles = get_cpu_cycles(op);
+    BYTE value = 0;
+
+    X() = value;
+
+    calc_alu_flags(X());
+    
+    return cycles;
+  }
+
+  cycle_t NES_CPU::LDY(opcode_t op) {
+    cycle_t cycles = get_cpu_cycles(op);
+    BYTE value = 0;
+
+    Y() = value;
+
+    calc_alu_flags(Y());
+
+    return cycles;
+  }
+
+  cycle_t NES_CPU::LSR(opcode_t op) {
 
   }
 }
