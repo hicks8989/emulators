@@ -1,4 +1,5 @@
 #include <unordered_map>
+#include <unordered_set>
 
 namespace NES_Emulator {
   typedef unsigned char BYTE;
@@ -177,7 +178,9 @@ namespace NES_Emulator {
       nes_addr_mode_rel,        
       nes_addr_mode_abs,                     
       nes_addr_mode_abs_jmp,                   
-      nes_addr_mode_zp,         
+      nes_addr_mode_zp,
+      nes_addr_mode_zp_x,
+      nes_addr_mode_zp_y,         
       nes_addr_mode_zp_ind_x,   
       nes_addr_mode_zp_ind_y,   
       nes_addr_mode_abs_x,      
@@ -220,6 +223,7 @@ namespace NES_Emulator {
   private:
     // Instruction typedef
     typedef cycle_t (NES_CPU::*instruction)(opcode_t);
+    typedef cycle_t (NES_CPU::*address_mode_function)();
 
     // Operation instructions
     const std::unordered_map<opcode_t, instruction> OPERATION_INSTRUCTIONS = {
@@ -294,6 +298,25 @@ namespace NES_Emulator {
       {0x98, &TYA},                                           // TYA
     };
 
+    // Address mode to function
+    const std::unordered_map<nes_addr_mode, address_mode_function> ADDRESS_MODE_FUNCTIONS = {
+      {nes_addr_mode::nes_addr_mode_imp,      &IMP}, {nes_addr_mode::nes_addr_mode_imm,      &IMM},
+      {nes_addr_mode::nes_addr_mode_zp,       &ZP0}, {nes_addr_mode::nes_addr_mode_zp_ind_x, &ZPX},
+      {nes_addr_mode::nes_addr_mode_zp_ind_y, &ZPY}, {nes_addr_mode::nes_addr_mode_abs,      &ABS},
+      {nes_addr_mode::nes_addr_mode_abs_jmp,  &ABS}, {nes_addr_mode::nes_addr_mode_abs_x,    &ABX},
+      {nes_addr_mode::nes_addr_mode_abs_y,    &ABY}, {nes_addr_mode::nes_addr_mode_ind_jmp,  &IND},
+      {nes_addr_mode::nes_addr_mode_ind_x,    &ZPX}, {}
+    };
+
+    // Memory Addressing modes
+    const std::unordered_set<nes_addr_mode> MEMORY_ADDRESSING_MODES = {
+      nes_addr_mode::nes_addr_mode_abs, nes_addr_mode::nes_addr_mode_abs_x,
+      nes_addr_mode::nes_addr_mode_abs_y, nes_addr_mode::nes_addr_mode_ind_x,
+      nes_addr_mode::nes_addr_mode_ind_y, nes_addr_mode::nes_addr_mode_zp,
+      nes_addr_mode::nes_addr_mode_zp_ind_x, nes_addr_mode::nes_addr_mode_zp_ind_y,
+      nes_addr_mode::nes_addr_mode_zp_x, nes_addr_mode::nes_addr_mode_zp_y
+    };
+
     // Flags
     static const BYTE N = 0b10000000; // Negative
     static const BYTE V = 0b01000000; // Overflow
@@ -318,6 +341,7 @@ namespace NES_Emulator {
     // Addressing Values
     operand_t imm;
     operand_t addr_abs;
+    operand_t addr_rel;
 
     // Flag Helpers
     void set_flag(BYTE, bool);
@@ -327,13 +351,18 @@ namespace NES_Emulator {
     cycle_t get_cpu_cycles(opcode_t);
 
     // Instruction Helpers
-    cycle_t branch(BYTE);
+    instruction get_instruction(opcode_t);
+    cycle_t run_instruction(opcode_t);
+    cycle_t branch();
+    void jump();
 
     // Page Helpers
     page_t get_page(address_t);
 
     // Address Mode Helpers
     nes_addr_mode get_address_mode(opcode_t);
+    cycle_t set_value_for_address_mode(nes_addr_mode);
+    BYTE get_value_for_address_mode(nes_addr_mode);
 
     // Addressing Helpers
     cycle_t IMP(); cycle_t IMM(); cycle_t ZP0();
@@ -364,7 +393,6 @@ namespace NES_Emulator {
     cycle_t SEC(opcode_t); cycle_t SED(opcode_t); cycle_t SEI(opcode_t); cycle_t STA(opcode_t);
     cycle_t STX(opcode_t); cycle_t STY(opcode_t); cycle_t TAX(opcode_t); cycle_t TAY(opcode_t);
     cycle_t TSX(opcode_t); cycle_t TXA(opcode_t); cycle_t TXS(opcode_t); cycle_t TYA(opcode_t);
-
   };
 
   class NES_APU {
