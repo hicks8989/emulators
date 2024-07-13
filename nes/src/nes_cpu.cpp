@@ -2,7 +2,7 @@
 
 namespace NES_Emulator {
   // Helpers
-  void NES_CPU::reset() {
+  cycle_t NES_CPU::reset() {
     A() = 0;
     X() = 0;
     Y() = 0;
@@ -10,14 +10,53 @@ namespace NES_Emulator {
     P() = 0x00;
 
     addr_abs = 0xFFFC;
-    BYTE lo = bus->read(addr_abs);
-    BYTE hi = bus->read(addr_abs + 1);
+    BYTE lo = bus->cpu_read(addr_abs);
+    BYTE hi = bus->cpu_read(addr_abs + 1);
 
     PC() = (hi << 8) | lo;
 
     addr_rel = 0x0000;
     addr_abs = 0x0000;
     imm = 0x00;
+
+    return 8;
+  }
+
+  cycle_t NES_CPU::IRQ() {
+    if (P() & I)
+      return;
+    
+    bus->cpu_write(0x0100 + SP()--, (PC() >> 8) & 0x00FF);
+    bus->cpu_write(0x0100 + SP()--, PC() & 0x00FF);
+
+    set_flag(B, 0);
+		set_flag(_, 1);
+		set_flag(I, 1);
+    bus->cpu_write(0x0100 + SP()--, P());
+
+    addr_abs = 0xFFEE;
+    BYTE lo = bus->cpu_read(addr_abs + 0);
+		BYTE hi = bus->cpu_read(addr_abs + 1);
+    PC() = (hi << 8) & lo;
+
+    return 7;
+  }
+
+  cycle_t NES_CPU::NMI() {
+    bus->cpu_write(0x0100 + SP()--, (PC() >> 8) & 0x00FF);
+    bus->cpu_write(0x0100 + SP()--, PC() & 0x00FF);
+
+    set_flag(B, 0);
+		set_flag(_, 1);
+		set_flag(I, 1);
+    bus->cpu_write(0x0100 + SP()--, P());
+
+    addr_abs = 0xFFEE;
+    BYTE lo = bus->cpu_read(addr_abs + 0);
+		BYTE hi = bus->cpu_read(addr_abs + 1);
+    PC() = (hi << 8) & lo;
+
+    return 8;
   }
 
   void NES_CPU::set_flag(BYTE F, bool v) {
@@ -85,7 +124,7 @@ namespace NES_Emulator {
 
   BYTE NES_CPU::get_value_for_address_mode(nes_addr_mode addr_mode) {
     if (MEMORY_ADDRESSING_MODES.count(addr_mode)) {
-      return bus->read(addr_abs);
+      return bus->cpu_read(addr_abs);
     } else if (addr_mode == nes_addr_mode::nes_addr_mode_acc) {
       return A();
     }
@@ -98,39 +137,39 @@ namespace NES_Emulator {
   }
 
   cycle_t NES_CPU::IMM() {
-    imm = bus->read(PC()++);
+    imm = bus->cpu_read(PC()++);
     return 0;
   }
 
   cycle_t NES_CPU::ZP0() {
-    addr_abs = bus->read(PC()++);
+    addr_abs = bus->cpu_read(PC()++);
     addr_abs &= 0x00FF;
     return 0;
   }
 
   cycle_t NES_CPU::ZPX() {
-    addr_abs = (address_t)bus->read(PC()++) + X();
+    addr_abs = (address_t)bus->cpu_read(PC()++) + X();
     addr_abs &= 0x00FF;
     return 0;
   }
 
   cycle_t NES_CPU::ZPY() {
-    addr_abs = (address_t)bus->read(PC()++) + Y();
+    addr_abs = (address_t)bus->cpu_read(PC()++) + Y();
     addr_abs &= 0x00FF;
     return 0;
   }
 
   cycle_t NES_CPU::ABS() {
-    BYTE lo = bus->read(PC()++);
-    BYTE hi = bus->read(PC()++);
+    BYTE lo = bus->cpu_read(PC()++);
+    BYTE hi = bus->cpu_read(PC()++);
 
     addr_abs = (hi << 8) | lo;
     return 0;
   }
 
   cycle_t NES_CPU::ABX() {
-    BYTE lo = bus->read(PC()++);
-    BYTE hi = bus->read(PC()++);
+    BYTE lo = bus->cpu_read(PC()++);
+    BYTE hi = bus->cpu_read(PC()++);
 
     addr_abs = (hi << 8) | lo;
     addr_abs += X();
@@ -143,8 +182,8 @@ namespace NES_Emulator {
   }
 
   cycle_t NES_CPU::ABY() {
-    BYTE lo = bus->read(PC()++);
-    BYTE hi = bus->read(PC()++);
+    BYTE lo = bus->cpu_read(PC()++);
+    BYTE hi = bus->cpu_read(PC()++);
 
     addr_abs = (hi << 8) | lo;
     addr_abs += Y();
@@ -157,36 +196,36 @@ namespace NES_Emulator {
   }
 
   cycle_t NES_CPU::IND() {
-    BYTE lo = bus->read(PC()++);
-    BYTE hi = bus->read(PC()++);
+    BYTE lo = bus->cpu_read(PC()++);
+    BYTE hi = bus->cpu_read(PC()++);
 
     address_t ptr = (hi << 8) | lo;
 
     if (lo == 0x00FF) {
-      addr_abs = (bus->read(ptr & 0xFF00) << 8) | bus->read(ptr);
+      addr_abs = (bus->cpu_read(ptr & 0xFF00) << 8) | bus->cpu_read(ptr);
     } else {
-      addr_abs = (bus->read(ptr + 1) << 8) | bus->read(ptr);
+      addr_abs = (bus->cpu_read(ptr + 1) << 8) | bus->cpu_read(ptr);
     }
 
     return 0;
   }
 
   cycle_t NES_CPU::IZX() {
-    address_t ptr = (address_t)bus->read(PC()++) + X();
+    address_t ptr = (address_t)bus->cpu_read(PC()++) + X();
     ptr &= 0x00FF;
 
-    addr_abs = (bus->read((ptr + 1) & 0x00FF) << 8) | bus->read(ptr);
+    addr_abs = (bus->cpu_read((ptr + 1) & 0x00FF) << 8) | bus->cpu_read(ptr);
     return 0;
   }
 
   cycle_t NES_CPU::IZY() {
-    address_t ptr = bus->read(PC()++);
+    address_t ptr = bus->cpu_read(PC()++);
     ptr &= 0x00FF;
 
-    addr_abs = (bus->read((ptr + 1) & 0x00FF) << 8) | bus->read(ptr);
+    addr_abs = (bus->cpu_read((ptr + 1) & 0x00FF) << 8) | bus->cpu_read(ptr);
     addr_abs += Y();
 
-    if (get_page(addr_abs) != bus->read((ptr + 1) & 0x00FF)) {
+    if (get_page(addr_abs) != bus->cpu_read((ptr + 1) & 0x00FF)) {
       return 1;
     }
 
@@ -194,7 +233,7 @@ namespace NES_Emulator {
   }
 
   cycle_t NES_CPU::REL() {
-    addr_rel = bus->read(PC()++);
+    addr_rel = bus->cpu_read(PC()++);
     if (addr_rel & 0x80) {
       addr_rel |= 0xFF00;
     }
@@ -258,11 +297,11 @@ namespace NES_Emulator {
       A() <<= 1;
       calc_alu_flags(A());
     } else {
-      BYTE data = bus->read(addr_abs);
+      BYTE data = bus->cpu_read(addr_abs);
       set_flag(C, data & 0x80);
       data <<= 1;
       calc_alu_flags(data);
-      bus->write(addr_abs, data);
+      bus->cpu_write(addr_abs, data);
     }
 
     return cycles;
@@ -533,12 +572,12 @@ namespace NES_Emulator {
     cycle_t cycles = get_cpu_cycles(op);
     nes_addr_mode addr_mode = get_address_mode(op);
     cycles += set_value_for_address_mode(addr_mode);
-    BYTE val = bus->read(addr_abs);
+    BYTE val = bus->cpu_read(addr_abs);
 
     val -= 1;
 
     calc_alu_flags(val);
-    bus->write(addr_abs, val);
+    bus->cpu_write(addr_abs, val);
 
     return cycles;
   }
@@ -589,12 +628,12 @@ namespace NES_Emulator {
     cycle_t cycles = get_cpu_cycles(op);
     nes_addr_mode addr_mode = get_address_mode(op);
     cycles += set_value_for_address_mode(addr_mode);
-    BYTE val = bus->read(addr_abs);
+    BYTE val = bus->cpu_read(addr_abs);
 
     val = (int)val + 1;
 
     calc_alu_flags(val);
-    bus->write(addr_abs, val);
+    bus->cpu_write(addr_abs, val);
 
     return cycles;
   }
@@ -641,8 +680,8 @@ namespace NES_Emulator {
     nes_addr_mode addr_mode = nes_addr_mode::nes_addr_mode_abs_jmp;
     cycles += set_value_for_address_mode(addr_mode);
 
-    bus->write(SP()++, PC() + 2);
-    bus->write(SP()++, (PC() + 2) >> 8);
+    bus->cpu_write(SP()++, PC() + 2);
+    bus->cpu_write(SP()++, (PC() + 2) >> 8);
 
     jump();
 
@@ -698,11 +737,11 @@ namespace NES_Emulator {
       A() >>= 1;
       calc_alu_flags(A());
     } else {
-      BYTE data = bus->read(addr_abs);
+      BYTE data = bus->cpu_read(addr_abs);
       set_flag(C, data & 1);
       data >>= 1;
       calc_alu_flags(data);
-      bus->write(addr_abs, data);
+      bus->cpu_write(addr_abs, data);
     }
 
     return cycles;
@@ -728,7 +767,7 @@ namespace NES_Emulator {
 
   cycle_t NES_CPU::PHA(opcode_t op) {
     cycle_t cycles = get_cpu_cycles(op);
-    bus->write(0x0100 + SP()--, A());
+    bus->cpu_write(0x0100 + SP()--, A());
 
     return cycles;
   }
@@ -740,7 +779,7 @@ namespace NES_Emulator {
     set_flag(B, 1);
     set_flag(_, 1);
 
-    bus->write(0x0100 + SP()--, P());
+    bus->cpu_write(0x0100 + SP()--, P());
     P() = pre_push;
 
     return cycles;
@@ -749,7 +788,7 @@ namespace NES_Emulator {
   cycle_t NES_CPU::PLA(opcode_t op) {
     cycle_t cycles = get_cpu_cycles(op);
 
-    A() = bus->read(0x0100 + ++SP());
+    A() = bus->cpu_read(0x0100 + ++SP());
 
     calc_alu_flags(A());
 
@@ -758,7 +797,7 @@ namespace NES_Emulator {
 
   cycle_t NES_CPU::PLP(opcode_t op) {
     cycle_t cycles = get_cpu_cycles(op);
-    P() = bus->read(0x0100 + ++SP());
+    P() = bus->cpu_read(0x0100 + ++SP());
 
     set_flag(_, 0);
     set_flag(B, 0);
@@ -778,12 +817,12 @@ namespace NES_Emulator {
       A() = temp & 0x00FF;
       calc_alu_flags(A());
     } else {
-      WORD val = bus->read(addr_abs);
+      WORD val = bus->cpu_read(addr_abs);
 
       val = (val << 1) | C;
       set_flag(C, val > 0x00FF);
       calc_alu_flags(val);
-      bus->write(addr_abs, val & 0x00FF);
+      bus->cpu_write(addr_abs, val & 0x00FF);
     }
   }
 
@@ -797,20 +836,20 @@ namespace NES_Emulator {
       set_flag(C, A() & 0x01);
       calc_alu_flags(A());
     } else {
-      BYTE val = bus->read(addr_abs);
+      BYTE val = bus->cpu_read(addr_abs);
 
       val = (C << 7) | (val >> 1);
       set_flag(C, val & 0x01);
       calc_alu_flags(val);
-      bus->write(addr_abs, val);
+      bus->cpu_write(addr_abs, val);
     }
   }
 
   cycle_t NES_CPU::RTI(opcode_t op) {
     cycle_t cycles = get_cpu_cycles(op);
-    P() = bus->read(SP()--);
-    BYTE lo = bus->read(SP()--);
-    BYTE hi = bus->read(SP()--);
+    P() = bus->cpu_read(SP()--);
+    BYTE lo = bus->cpu_read(SP()--);
+    BYTE hi = bus->cpu_read(SP()--);
 
     set_flag(_, 0);
     set_flag(B, 0);
@@ -822,8 +861,8 @@ namespace NES_Emulator {
 
   cycle_t NES_CPU::RTS(opcode_t op) {
     cycle_t cycles = get_cpu_cycles(op);
-    BYTE lo = bus->read(SP()--);
-    BYTE hi = bus->read(SP()--);
+    BYTE lo = bus->cpu_read(SP()--);
+    BYTE hi = bus->cpu_read(SP()--);
 
     PC() = (hi << 8) | lo;
 
@@ -876,7 +915,7 @@ namespace NES_Emulator {
     nes_addr_mode addr_mode = get_address_mode(op);
     cycles += set_value_for_address_mode(addr_mode);
     
-    bus->write(addr_abs, A());
+    bus->cpu_write(addr_abs, A());
 
     return cycles;
   }
@@ -886,7 +925,7 @@ namespace NES_Emulator {
     nes_addr_mode addr_mode = get_address_mode(op);
     cycles += set_value_for_address_mode(addr_mode);
     
-    bus->write(addr_abs, X());
+    bus->cpu_write(addr_abs, X());
 
     return cycles;
   }
@@ -896,7 +935,7 @@ namespace NES_Emulator {
     nes_addr_mode addr_mode = get_address_mode(op);
     cycles += set_value_for_address_mode(addr_mode);
     
-    bus->write(addr_abs, Y());
+    bus->cpu_write(addr_abs, Y());
 
     return cycles;
   }

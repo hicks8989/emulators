@@ -1,3 +1,10 @@
+#include <cstdint>
+#include <string>
+#include <fstream>
+#include <vector>
+#include <unordered_map>
+#include <unordered_set>
+
 namespace NES_Emulator {
   typedef unsigned char BYTE;
   typedef unsigned short int WORD;

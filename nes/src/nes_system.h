@@ -1,5 +1,6 @@
 #include "nes.h"
 #include "nes_cpu.h"
+#include "nes_ppu.h"
 #include "nes_bus.h"
 
 namespace NES_Emulator {
@@ -10,15 +11,13 @@ namespace NES_Emulator {
 
     // Processors
     NES_CPU* _cpu;
+    NES_PPU* _ppu;
 
     // Memory
     NES_Bus* _bus;
 
   public:
-    NES_System() {
-      _bus = new NES_Bus(); 
-      _cpu = new NES_CPU(_bus); 
-    };
+    NES_System();
     void clock();
   };
 }

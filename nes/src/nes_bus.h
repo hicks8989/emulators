@@ -1,15 +1,24 @@
 #include "nes.h"
-#include <unordered_map>
-#include <unordered_set>
+#include "nes_cartridge.h"
 
 namespace NES_Emulator {
   class NES_Bus {
   private:
     // Memory
-    BYTE memory[0xFFFF];
+    BYTE cpu_ram[0xFFFF];
+
+    // Cartridge
+    const NES_Cartridge* cartridge;
 
   public:
-    BYTE read(address_t);
-    void write(address_t, BYTE);
+    // Read and Write
+    BYTE cpu_read(address_t);
+    void cpu_write(address_t, BYTE);
+
+    BYTE ppu_read(address_t);
+    void ppu_write(address_t, BYTE);
+
+    // System interface
+    void insert_cartridge(const NES_Cartridge*);
   };
 }

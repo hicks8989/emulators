@@ -1,7 +1,5 @@
 #include "nes.h"
 #include "nes_bus.h"
-#include <unordered_map>
-#include <unordered_set>
 
 namespace NES_Emulator {
   // Operation Cycles
@@ -305,7 +303,9 @@ namespace NES_Emulator {
     operand_t addr_rel;
 
     // CPU state helpers
-    void reset();
+    cycle_t reset();
+    cycle_t IRQ();
+    cycle_t NMI();
 
     // Flag Helpers
     void set_flag(BYTE, bool);
