@@ -16,8 +16,17 @@ namespace NES_Emulator {
     // Mapper
     NES_Mapper* mapper;
 
+    // Mirroring
+    mirror_mode mirror;
 
   public:
     NES_Cartridge(const std::string&);
+
+    // Read ROM
+    BYTE read_prg_memory(address_t);
+    BYTE read_chr_memory(address_t);
+
+    // Mirror mode
+    mirror_mode get_mirror_mode();
   };
 }

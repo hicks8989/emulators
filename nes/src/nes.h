@@ -14,4 +14,10 @@ namespace NES_Emulator {
   typedef unsigned short int operand_t;
   typedef unsigned short int address_t;
   typedef cycle_t (*instruction(opcode_t));
+
+  enum mirror_mode {
+    VERTICAL,
+    HORIZONTAL,
+    FOUR_SCREEN
+  };
 }

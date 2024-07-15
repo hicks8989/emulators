@@ -64,4 +64,26 @@ namespace NES_Emulator {
 
 		ifs.close();
   }
+
+  BYTE NES_Cartridge::read_prg_memory(address_t address) {
+    if (prg_memory.size() == 0x4000) {
+      // Mirror for 16KB addresses
+      return prg_memory[address & 0x3FFF];
+    }
+
+    return prg_memory[address];
+  }
+
+  BYTE NES_Cartridge::read_chr_memory(address_t address) {
+    if (chr_memory.size() == 0x4000) {
+      // Mirror for 16KB addresses
+      return chr_memory[address & 0x3FFF];
+    }
+
+    return chr_memory[address];
+  }
+
+  mirror_mode NES_Cartridge::get_mirror_mode() {
+    return mirror;
+  }
 }
