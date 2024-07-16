@@ -1,17 +1,6 @@
 #include "nes_ppu.h"
 
 namespace NES_Emulator {
-  bool NES_PPU::get_flag(BYTE f) {
-    return control & f;
-  }
-
-  void NES_PPU::set_flag(BYTE f, bool v) {
-    if (v)
-      control |= f;
-    else
-      control &= ~f;
-  }
-
   address_t NES_PPU::mirror_vram_addr(address_t address) {
     address_t mirrored_address = address & 0x2FFF;
     address_t vram_index = mirrored_address - 0x2000;
@@ -30,15 +19,40 @@ namespace NES_Emulator {
   }
 
   NES_PPU::NES_PPU() {
-    this->addr = new NES_PPU_Address_Register();
+    control = new NES_PPU_Control_Register();
+    mask = new NES_PPU_Mask_Register();
+    status = new NES_PPU_Status_Register();
+    scroll = new NES_PPU_Scroll_Register();
+    addr = new NES_PPU_Address_Register();
   }
 
   void NES_PPU::increment_vram_addr() {
-    addr->add(get_flag(VAI) ? 32 : 1);
+    addr->add(control->get_vram_increment());
   }
 
   void NES_PPU::write_to_control(BYTE v) {
-    control = v;
+    control->set(v);
+  }
+
+  void NES_PPU::write_to_mask(BYTE v) {
+    mask->set(v);
+  }
+
+  BYTE NES_PPU::read_status() {
+    status->get();
+  }
+
+  BYTE NES_PPU::read_oam_data() {
+    return oam_data[oam_address];
+  }
+
+  void NES_PPU::write_to_oam_addr(BYTE val) {
+    oam_address = val;
+  }
+
+  void NES_PPU::write_to_oam_data(BYTE val) {
+    oam_data[oam_address] = val;
+    oam_address = (int)oam_address + 1;
   }
 
   void NES_PPU::write_to_ppu_addr(BYTE v) {

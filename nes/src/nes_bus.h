@@ -9,7 +9,7 @@ namespace NES_Emulator {
     BYTE cpu_ram[0xFFFF];
 
     // PPU
-    NES_PPU ppu;
+    NES_PPU* ppu;
 
     // Cartridge
     NES_Cartridge* cartridge;
