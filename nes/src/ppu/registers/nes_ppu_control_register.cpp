@@ -24,6 +24,14 @@ namespace NES_Emulator {
     return control;
   }
 
+  address_t NES_PPU_Control_Register::get_background_pattern_addr() {
+    return get_flag(flag::BPA) ? 0x1000 : 0;
+  }
+
+  address_t NES_PPU_Control_Register::get_sprite_pattern_addr() {
+    return get_flag(flag::SPA) ? 0x1000 : 0;
+  }
+
   uint8_t NES_PPU_Control_Register::get_vram_increment() {
     return get_flag(flag::VAI) ? 32 : 1;
   }

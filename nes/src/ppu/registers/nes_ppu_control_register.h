@@ -29,6 +29,10 @@ namespace NES_Emulator {
     void set(BYTE v);
     BYTE get();
 
+    // Flag getters
+    address_t get_background_pattern_addr();
+    address_t get_sprite_pattern_addr();
+
     // Helpers
     uint8_t get_vram_increment();
   };

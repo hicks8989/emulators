@@ -1,6 +1,7 @@
 {
   "files.associations": {
     "filesystem": "cpp",
-    "__locale": "cpp"
+    "__locale": "cpp",
+    "vector": "cpp"
   }
 }

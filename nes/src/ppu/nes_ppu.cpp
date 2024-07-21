@@ -91,4 +91,115 @@ namespace NES_Emulator {
   void NES_PPU::insert_cartridge(NES_Cartridge* cartridge) {
     this->cartridge = cartridge;
   }
+
+  std::vector<uint8_t> NES_PPU::background_palette(BYTE tile_col, BYTE tile_row) {
+    uint8_t attr_table_idx = tile_row / 4 * 8 +  tile_col / 4;
+    BYTE attr_byte = vram[0x3C0 + attr_table_idx];
+    BYTE palette_idx;
+
+    switch ((tile_col % 4 / 2) << 1 | (tile_row % 4 / 2)) {
+      case 0:
+        palette_idx = attr_byte & 0b11;
+        break;
+      case 1:
+        palette_idx = (attr_byte >> 2) & 0b11;
+        break;
+      case 2:
+        palette_idx = (attr_byte >> 4) & 0b11;
+        break;
+      case 3:
+        palette_idx = (attr_byte >> 6) & 0b11;
+        break;
+    }
+
+    BYTE palette_start = 1 + (palette_idx * 4);
+    return {
+      palette_table[0], 
+      palette_table[palette_start], 
+      palette_table[palette_start + 1], 
+      palette_table[palette_start + 2]
+    };
+  }
+
+  std::vector<uint8_t> NES_PPU::sprite_palette(BYTE palette_idx) {
+    BYTE start = 0x11 + (palette_idx * 4);
+    return {
+      0,
+      palette_table[start],
+      palette_table[start + 1],
+      palette_table[start + 2]
+    };
+  }
+
+  void NES_PPU::render(NES_Frame &frame) {
+    // Render background
+    address_t bank = control->get_background_pattern_addr();
+
+    for (int i = 0; i < 0x03C0; i++) {
+      address_t tile = vram[i];
+      BYTE tile_x = tile % 32;
+      BYTE tile_y = tile / 32;
+      std::vector<uint8_t> palette = background_palette(tile_x, tile_y);
+      
+      for (int y = 0; y <= 7; y++) {
+        BYTE upper = cartridge->read_chr_memory(y + (bank + tile * 16));
+        BYTE lower = cartridge->read_chr_memory(y + 8 + (bank + tile * 16));
+
+        for (int x = 7; x >= 0; x--) {
+          BYTE val = (1 & upper) << 1 | (1 & lower);
+          upper >>= 1;
+          lower >>= 1;
+          std::vector<uint8_t> rgb = SYSTEM_PALETTE[palette[val]];
+          frame.set_pixel(tile_x * 8 + x, tile_y * 8 + y, rgb[0], rgb[1], rgb[2]);
+        }
+      }
+    }
+
+    // Render sprites
+    for (int i = 252; i >= 0; i--) {
+      address_t tile = oam_data[i + 1];
+      BYTE tile_x = oam_data[i + 3];
+      BYTE tile_y = oam_data[i];
+
+      bool flip_vertical = (oam_data[i + 2] >> 7) & 1;
+      bool flip_horizontal = (oam_data[i + 2] >> 6) & 1;
+      BYTE flip = (oam_data[i + 2] >> 6) & 0b11;
+
+      BYTE palette_idx = oam_data[i + 2] & 0b11;
+      std::vector<uint8_t> palette = sprite_palette(palette_idx);
+
+      bank = control->get_sprite_pattern_addr();
+
+      for (int y = 0; y <= 7; y++) {
+        BYTE upper = cartridge->read_chr_memory(y + (bank + tile * 16));
+        BYTE lower = cartridge->read_chr_memory(y + 8 + (bank + tile * 16));
+
+        for (int x = 7; x >= 0; x--) {
+          BYTE val = (1 & upper) << 1 | (1 & lower);
+          upper >>= 1;
+          lower >>= 1;
+
+          if (val == 0)
+            continue;
+          
+          std::vector<uint8_t> rgb = SYSTEM_PALETTE[palette[val]];
+
+          switch (flip) {
+            case 0:
+              frame.set_pixel(tile_x + x, tile_y + y, rgb[0], rgb[1], rgb[2]);
+              break;
+            case 1:
+              frame.set_pixel(tile_x + 7 - x, tile_y + y, rgb[0], rgb[1], rgb[2]);
+              break;
+            case 2:
+              frame.set_pixel(tile_x + x, tile_y + 7 - y, rgb[0], rgb[1], rgb[2]);
+              break;
+            case 3:
+              frame.set_pixel(tile_x + 7 - x, tile_y + 7 - y, rgb[0], rgb[1], rgb[2]);
+              break;
+          }
+        }
+      }
+    }
+  }
 }

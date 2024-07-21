@@ -7,7 +7,11 @@ namespace NES_Emulator {
   class NES_System {
   private:
     // Cycles
-    cycle_t cycles;
+    cycle_t cpu_cycles;
+    cycle_t ppu_cycles;
+
+    // Scanline
+    BYTE scanline;
 
     // Processors
     NES_CPU* _cpu;

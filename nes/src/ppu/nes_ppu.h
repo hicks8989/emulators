@@ -2,6 +2,8 @@
 #include "nes_cartridge.h"
 #include "nes_ppu_address_register.h"
 #include "nes_ppu_control_register.h"
+#include "nes_frame.h"
+#include "nes_palette.h"
 #include "nes_ppu_mask_register.h"
 #include "nes_ppu_scroll_register.h"
 #include "nes_ppu_status_register.h"
@@ -34,9 +36,8 @@ namespace NES_Emulator {
     public:
       NES_PPU();
 
-      // Read and Write
+      // Read
       BYTE read();
-      void write(BYTE);
 
       // VRAM
       void increment_vram_addr();
@@ -64,5 +65,13 @@ namespace NES_Emulator {
 
       // Cartridge
       void insert_cartridge(NES_Cartridge*);
+
+      // Palette
+      std::vector<uint8_t> background_palette(BYTE, BYTE);
+      std::vector<uint8_t> sprite_palette(BYTE);
+
+      // Render
+      void render(NES_Frame&);
+
   };
 }
